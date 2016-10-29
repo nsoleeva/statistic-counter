@@ -2,7 +2,12 @@ package app;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Scanner;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author Natali
@@ -13,6 +18,8 @@ import java.util.Scanner;
 // TODO: What about tests??? It will be great, but I'm not sure about it
 
 public class Main {
+
+    public static ConcurrentHashMap<String, ArrayList<String>> domains = new ConcurrentHashMap();
 
     // TODO: think may be we can use documentation DB to store responses...
     //       No, it means we will need some installed DB. I don't think it's a good idea.
@@ -28,29 +35,42 @@ public class Main {
 
 
     public static void main( String[] args ) {
+
+        ExecutorService executorService = Executors.newFixedThreadPool(10);
+
+        String fileName = args.length > 0 ? args[0] : "src/main/java/app/inputFile.txt";
         try {
-            File file;
-            if (args.length > 0) {
+            File file = new File(fileName);;
+/*            if (args.length > 0) {
                 file = new File(args[0]);
             } else {
                 //FIXME: System.out.println("Working Directory = " + System.getProperty("user.dir"));
-                file = new File("src/main/java/app/inputFile.txt");
-            }
+                file = new File(;
+            }*/
             Scanner scanner = new Scanner(file);
             while (scanner.hasNextLine()) {
                 String str = scanner.nextLine();
                 System.out.println(str);
-                HttpClient.executeRequest(str);
+                //HttpClient.executeRequest(str);
                 // TODO: try request to API
+                if (!str.isEmpty()) {
+                    executorService.execute(new RequestTask(str));
+                }
             }
 
+            try {
+                executorService.shutdown();
+                executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
             System.out.println("\nResult statistic");
-            for (String domainName : HttpClient.domains.keySet()) {
-                System.out.println(domainName + ": " + HttpClient.domains.get(domainName).size());
+            for (String domainName : domains.keySet()) {
+                System.out.println(domainName + ": " + domains.get(domainName).size());
             }
 
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("File with name " + fileName + "no found. Please, provide correct file name.");
         }
     }
 
