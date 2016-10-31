@@ -42,7 +42,7 @@ public class DomainUsageStatisticApp {
             }
 
             File file = new File(fileName);
-            Scanner scanner = new Scanner(file);
+            Scanner scanner = new Scanner(file, "UTF-8");
             ExecutorService executorService = Executors.newFixedThreadPool(10);
 
             while (scanner.hasNextLine()) {
