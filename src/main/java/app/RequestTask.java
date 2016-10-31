@@ -13,7 +13,6 @@ import java.io.InputStreamReader;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 
-
 /**
  * @author nsoleeva
  *
@@ -43,12 +42,11 @@ public class RequestTask implements Runnable {
 
         } catch (HttpResponseException e) {
             StringBuilder strb = new StringBuilder("Server response with error::");
-            Main.log.fine(strb.append(e.getStatusCode()).append(" ").append(e.getMessage()).toString());
+            System.err.println(strb.append(e.getStatusCode()).append(" ").append(e.getMessage()));
         } catch (IOException e) {
-            Main.log.fine(e.getMessage());
+            System.err.println(e.getMessage());
         } catch (URISyntaxException e) {
-            // TODO:
-            e.printStackTrace();
+            System.err.println(e.getMessage());
         }
     }
 
@@ -68,7 +66,7 @@ public class RequestTask implements Runnable {
                     String domainName = URLUtil.getDomainName(link);
 
                     // filter out the repeated links and update statistic
-                    ArrayList<String> savedLinks = Main.domains.get(domainName);
+                    ArrayList<String> savedLinks = DomainUsageStatisticApp.domains.get(domainName);
                     if (savedLinks != null) {
                         if (!savedLinks.contains(link)) {
                             savedLinks.add(link);
@@ -76,17 +74,15 @@ public class RequestTask implements Runnable {
                     } else {
                         savedLinks = new ArrayList<>();
                         savedLinks.add(link);
-                        Main.domains.put(domainName, savedLinks);
+                        DomainUsageStatisticApp.domains.put(domainName, savedLinks);
                     }
 
                 } catch (URISyntaxException e) {
-                    //TODO:
-                    e.printStackTrace();
+                    System.err.println(e.getMessage());
                 }
             }
         } catch (FeedException e) {
-            //TODO:
-            e.printStackTrace();
+            System.err.println(e.getMessage());
         }
     }
 

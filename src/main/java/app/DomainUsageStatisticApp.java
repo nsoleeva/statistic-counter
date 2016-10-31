@@ -12,13 +12,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
-// TODO: Will be cool to have some logger which we will can to switch on/off
-// TODO: What about tests??? It will be great, but I'm not sure about it
-
-    // TODO: create properties file for logging
 
 /**
  *
@@ -31,13 +24,15 @@ import java.util.logging.Logger;
  * This class roles as a entry point.
  *
  */
-public class Main {
+public class DomainUsageStatisticApp {
+
+    static {
+        System.setProperty("org.apache.commons.logging.Log", "org.apache.commons.logging.impl.NoOpLog");
+    }
 
     public static ConcurrentHashMap<String, ArrayList<String>> domains = new ConcurrentHashMap();
-    public static Logger log = Logger.getLogger("myApp");
 
     public static void main( String[] args ) {
-        log.setLevel(Level.INFO);
         try {
             String fileName;
             if (args.length > 0) {
@@ -52,7 +47,6 @@ public class Main {
 
             while (scanner.hasNextLine()) {
                 String str = scanner.nextLine();
-                log.fine("processing request for " + str + "...");
                 if (!str.isEmpty()) {
                     executorService.execute(new RequestTask(str.trim()));
                 }
@@ -62,12 +56,12 @@ public class Main {
                 executorService.shutdown();
                 executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
             } catch (InterruptedException e) {
-                log.fine(e.getMessage());
+                System.err.println(e.getMessage());
             }
 
             printResults();
         } catch (IOException e) {
-            log.info("Input file not found or not specified. Please, provide correct file name.");
+            System.out.println("Input file not found or not specified. Please, provide correct file name.");
         }
     }
 
@@ -83,8 +77,6 @@ public class Main {
 
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         String json = gson.toJson(statisticResults);
-        // TODO: change out to log
-        //log.info();
         System.out.println("\nStatistic results \n" + json);
     }
 }
