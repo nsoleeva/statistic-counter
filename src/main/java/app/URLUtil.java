@@ -1,5 +1,6 @@
 package app;
 
+import com.google.common.net.InternetDomainName;
 import org.apache.http.client.utils.URIBuilder;
 
 import java.net.URI;
@@ -46,10 +47,10 @@ public class URLUtil {
         String host = new URI(url).getHost();
         if (host != null) {
             host = host.startsWith("www.") ? host.substring(4) : host;
-
-            String[] domainLevels = host.split("\\.");
-            if (domainLevels.length > 1) {
-                return domainLevels[domainLevels.length - 2] + "." + domainLevels[domainLevels.length - 1];
+            InternetDomainName domainName = InternetDomainName.from(host);
+            int size = domainName.parts().size();
+            if (size > 1) {
+                return domainName.parts().get(size - 2) + "." + domainName.parts().get(size -1);
             } else {
                 throw new URISyntaxException(url, "Unable to determine the second level domain");
             }
