@@ -12,71 +12,80 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.Iterator;
 
 
 /**
  * @author nsoleeva
+ *
+ * RequestTask is a runnable task for request to Yandex Blogs RSS API
+ *
  */
 public class RequestTask implements Runnable {
 
     private String requestWord;
 
-
+    /**
+     * RequestTask constructor
+     * @param requestStr requestStr is a string word used as a search criteria when task will be executed
+     */
     public RequestTask(String requestStr) {
         requestWord = requestStr;
     }
 
     @Override
     public void run() {
-        InputStream inputStream = null;
         try {
-            inputStream = Request.Get(URLHelper.buildRequestURI(requestWord))
+            InputStream inputStream = Request.Get(URLUtil.buildRequestURI(requestWord))
                     .connectTimeout(1000)
                     .socketTimeout(1000)
                     .execute().returnContent().asStream();
-            parseResult(inputStream);
+            parseRssResult(inputStream);
 
         } catch (HttpResponseException e) {
             StringBuilder strb = new StringBuilder("Server response with error::");
-            System.out.println(strb.append(e.getStatusCode()).append(" ").append(e.getMessage()));
+            Main.log.fine(strb.append(e.getStatusCode()).append(" ").append(e.getMessage()).toString());
         } catch (IOException e) {
-            System.out.println(e.getMessage());
+            Main.log.fine(e.getMessage());
         } catch (URISyntaxException e) {
+            // TODO:
             e.printStackTrace();
         }
-
-
     }
 
-    public void parseResult(InputStream inputStream) {
-
+    /**
+     * Parse response in RSS format and submit result to map with statistic
+     * @param inputStream is a InputStream which contains response to request to Yandex API in RSS
+     */
+    private void parseRssResult(InputStream inputStream) {
         try {
             SyndFeedInput input = new SyndFeedInput();
             SyndFeed feed = input.build(new InputStreamReader(inputStream));
 
-            // TODO: replace to foreach
-            Iterator entryIter = feed.getEntries().iterator();
-            while (entryIter.hasNext())
-            {
-                SyndEntry entry = (SyndEntry) entryIter.next();
+            for (SyndEntry entry : feed.getEntries()) {
                 String link = entry.getLink();
                 try {
-                    String domainName = URLHelper.getDomainName(link);
-                    // TODO: rewrite
+                    // lets parse second level domain from the link
+                    String domainName = URLUtil.getDomainName(link);
+
+                    // filter out the repeated links and update statistic
                     ArrayList<String> savedLinks = Main.domains.get(domainName);
-                    savedLinks = savedLinks != null ? savedLinks : new ArrayList<>();
-                    if (!savedLinks.contains(link)) {
+                    if (savedLinks != null) {
+                        if (!savedLinks.contains(link)) {
+                            savedLinks.add(link);
+                        }
+                    } else {
+                        savedLinks = new ArrayList<>();
                         savedLinks.add(link);
                         Main.domains.put(domainName, savedLinks);
                     }
+
                 } catch (URISyntaxException e) {
+                    //TODO:
                     e.printStackTrace();
                 }
-
             }
-            System.out.println("Thread end execution");
         } catch (FeedException e) {
+            //TODO:
             e.printStackTrace();
         }
     }

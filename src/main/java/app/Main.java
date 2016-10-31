@@ -1,60 +1,60 @@
 package app;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-/**
- * @author Natali
- */
-
-// TODO: !!! Don't forget to add java doc
 // TODO: Will be cool to have some logger which we will can to switch on/off
 // TODO: What about tests??? It will be great, but I'm not sure about it
 
+    // TODO: create properties file for logging
+
+/**
+ *
+ * @author nsoleeva
+ *
+ * Statistic counter app is responsible for collecting usage statistic for second level domains in search results.
+ * From this statistic you can get know how many times second level domain is used in the links
+ * provided by Yandex Blogs RSS API as a result of requests by key words from the file.
+ *
+ * This class roles as a entry point.
+ *
+ */
 public class Main {
 
     public static ConcurrentHashMap<String, ArrayList<String>> domains = new ConcurrentHashMap();
-
-    // TODO: think may be we can use documentation DB to store responses...
-    //       No, it means we will need some installed DB. I don't think it's a good idea.
-    //       We can think about Derby or somethink like IMDBs - it's like a Map, so we will need some keys... I don't know how we can do it
-
-
-    //public static String yandexRSSApiUrlExample = "http://blogs.yandex.ru/search.rss?text=scala";
-
-    // TODO: parse RSS response
-    // TODO: create ThreadPool and ThreadExecutor
-    // TODO: create queue
-    // TODO: store responses
-
+    public static Logger log = Logger.getLogger("myApp");
 
     public static void main( String[] args ) {
-
-        ExecutorService executorService = Executors.newFixedThreadPool(10);
-
-        String fileName = args.length > 0 ? args[0] : "src/main/java/app/inputFile.txt";
+        log.setLevel(Level.INFO);
         try {
-            File file = new File(fileName);;
-/*            if (args.length > 0) {
-                file = new File(args[0]);
+            String fileName;
+            if (args.length > 0) {
+                fileName = args[0];
             } else {
-                //FIXME: System.out.println("Working Directory = " + System.getProperty("user.dir"));
-                file = new File(;
-            }*/
+                throw new IOException();
+            }
+
+            File file = new File(fileName);
             Scanner scanner = new Scanner(file);
+            ExecutorService executorService = Executors.newFixedThreadPool(10);
+
             while (scanner.hasNextLine()) {
                 String str = scanner.nextLine();
-                System.out.println(str);
-                //HttpClient.executeRequest(str);
-                // TODO: try request to API
+                log.fine("processing request for " + str + "...");
                 if (!str.isEmpty()) {
-                    executorService.execute(new RequestTask(str));
+                    executorService.execute(new RequestTask(str.trim()));
                 }
             }
 
@@ -62,17 +62,29 @@ public class Main {
                 executorService.shutdown();
                 executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
             } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            System.out.println("\nResult statistic");
-            for (String domainName : domains.keySet()) {
-                System.out.println(domainName + ": " + domains.get(domainName).size());
+                log.fine(e.getMessage());
             }
 
+            printResults();
         } catch (IOException e) {
-            System.out.println("File with name " + fileName + "no found. Please, provide correct file name.");
+            log.info("Input file not found or not specified. Please, provide correct file name.");
         }
     }
 
 
+    /**
+     * Method to print final usage statistic result
+     */
+    private static void printResults() {
+        HashMap<String, Integer> statisticResults = new HashMap<>();
+        for (String domainName : domains.keySet()) {
+            statisticResults.put(domainName, domains.get(domainName).size());
+        }
+
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        String json = gson.toJson(statisticResults);
+        // TODO: change out to log
+        //log.info();
+        System.out.println("\nStatistic results \n" + json);
+    }
 }
