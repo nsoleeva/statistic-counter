@@ -12,6 +12,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author nsoleeva
@@ -22,13 +25,15 @@ import java.util.ArrayList;
 public class RequestTask implements Runnable {
 
     private String requestWord;
+    private ConcurrentHashMap<String, HashSet<String>> domainMap;
 
     /**
      * RequestTask constructor
      * @param requestStr requestStr is a string word used as a search criteria when task will be executed
      */
-    public RequestTask(String requestStr) {
-        requestWord = requestStr;
+    public RequestTask(String requestStr, ConcurrentHashMap<String, HashSet<String>> domainMap) {
+        this.requestWord = requestStr;
+        this.domainMap = domainMap;
     }
 
     @Override
@@ -64,19 +69,22 @@ public class RequestTask implements Runnable {
                 try {
                     // lets parse second level domain from the link
                     String domainName = URLUtil.getDomainName(link);
-
-                    // filter out the repeated links and update statistic
-                    ArrayList<String> savedLinks = DomainUsageStatisticApp.domains.get(domainName);
+                    // update statistic
+                    HashSet<String> savedLinks = domainMap.get(domainName);
                     if (savedLinks != null) {
-                        if (!savedLinks.contains(link)) {
-                            savedLinks.add(link);
-                        }
-                    } else {
-                        savedLinks = new ArrayList<>();
                         savedLinks.add(link);
-                        DomainUsageStatisticApp.domains.put(domainName, savedLinks);
+                    } else {
+                        synchronized (domainMap){
+                            savedLinks = domainMap.get(domainName);
+                            if (savedLinks == null) {
+                                savedLinks = new HashSet<>();
+                                savedLinks.add(link);
+                                domainMap.put(domainName, savedLinks);
+                            } else {
+                                savedLinks.add(link);
+                            }
+                        }
                     }
-
                 } catch (URISyntaxException e) {
                     System.err.println(e.getMessage());
                 }
@@ -85,6 +93,4 @@ public class RequestTask implements Runnable {
             System.err.println(e.getMessage());
         }
     }
-
-
 }

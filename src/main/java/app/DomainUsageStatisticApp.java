@@ -5,8 +5,8 @@ import com.google.gson.GsonBuilder;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -30,8 +30,6 @@ public class DomainUsageStatisticApp {
         System.setProperty("org.apache.commons.logging.Log", "org.apache.commons.logging.impl.NoOpLog");
     }
 
-    public static ConcurrentHashMap<String, ArrayList<String>> domains = new ConcurrentHashMap();
-
     public static void main( String[] args ) {
         try {
             String fileName;
@@ -43,12 +41,14 @@ public class DomainUsageStatisticApp {
 
             File file = new File(fileName);
             Scanner scanner = new Scanner(file, "UTF-8");
+
+            ConcurrentHashMap<String, HashSet<String>> domains = new ConcurrentHashMap<>();
             ExecutorService executorService = Executors.newFixedThreadPool(10);
 
             while (scanner.hasNextLine()) {
                 String str = scanner.nextLine();
                 if (!str.isEmpty()) {
-                    executorService.execute(new RequestTask(str.trim()));
+                    executorService.execute(new RequestTask(str.trim(), domains));
                 }
             }
 
@@ -59,7 +59,7 @@ public class DomainUsageStatisticApp {
                 System.err.println(e.getMessage());
             }
 
-            printResults();
+            printResults(domains);
         } catch (IOException e) {
             System.out.println("Input file not found or not specified. Please, provide correct file name.");
         }
@@ -69,14 +69,17 @@ public class DomainUsageStatisticApp {
     /**
      * Method to print final usage statistic result
      */
-    private static void printResults() {
-        HashMap<String, Integer> statisticResults = new HashMap<>();
-        for (String domainName : domains.keySet()) {
-            statisticResults.put(domainName, domains.get(domainName).size());
+    private static void printResults(ConcurrentHashMap<String, HashSet<String>> domains) {
+        if (domains != null && !domains.isEmpty()) {
+            HashMap<String, Integer> statisticResults = new HashMap<>();
+            for (String domainName : domains.keySet()) {
+                statisticResults.put(domainName, domains.get(domainName).size());
+            }
+            Gson gson = new GsonBuilder().setPrettyPrinting().create();
+            String json = gson.toJson(statisticResults);
+            System.out.println("\nStatistic results \n" + json);
+        } else {
+            System.out.println("\nNo statistic results.\n");
         }
-
-        Gson gson = new GsonBuilder().setPrettyPrinting().create();
-        String json = gson.toJson(statisticResults);
-        System.out.println("\nStatistic results \n" + json);
     }
 }
